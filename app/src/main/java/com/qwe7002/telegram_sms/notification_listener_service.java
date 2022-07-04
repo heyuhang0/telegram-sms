@@ -103,7 +103,7 @@ public class notification_listener_service extends NotificationListenerService {
         String content = extras.getString(Notification.EXTRA_TEXT, "None");
 
         String bot_token = sharedPreferences.getString("bot_token", "");
-        String chat_id = sharedPreferences.getString("chat_id", "");
+        String chat_id = other_func.get_chat_id(sharedPreferences, 0);
         String request_uri = network_func.get_url(bot_token, "sendMessage");
         request_message request_body = new request_message();
         request_body.chat_id = chat_id;

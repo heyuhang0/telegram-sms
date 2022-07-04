@@ -90,7 +90,7 @@ public class resend_service extends Service {
                     ArrayList<String> send_list = resend_list;
                     OkHttpClient okhttp_client = network_func.get_okhttp_obj(sharedPreferences.getBoolean("doh_switch", true), Paper.book("system_config").read("proxy_config", new proxy()));
                     for (String item : send_list) {
-                        network_progress_handle(item, sharedPreferences.getString("chat_id", ""), okhttp_client);
+                        network_progress_handle(item, other_func.get_chat_id(sharedPreferences, 0), okhttp_client);
                     }
                     resend_list = Paper.book().read(table_name, new ArrayList<>());
                     if (resend_list == send_list || resend_list.size() == 0) {

@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.telephony.SubscriptionInfo;
@@ -92,6 +93,18 @@ public class other_func {
             }
         }
         return result.toString();
+    }
+
+    public static String[] get_chat_ids(final SharedPreferences preferences) {
+        return preferences.getString("chat_id", "").split(";");
+    }
+
+    public static String get_chat_id(final SharedPreferences preferences, int slot) {
+        String[] chat_ids = get_chat_ids(preferences);
+        if (0 <= slot && slot < chat_ids.length) {
+            return chat_ids[slot];
+        }
+        return chat_ids[0];
     }
 
     public static String get_dual_sim_card_display(Context context, int slot, boolean show_name) {

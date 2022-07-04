@@ -33,12 +33,12 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class sms_func {
-    public static void send_sms(Context context, String send_to, String content, int slot, int sub_id) {
-        send_sms(context, send_to, content, slot, sub_id, -1);
+    public static void send_sms(Context context, String send_to, String content, int slot, String chat_id, int sub_id) {
+        send_sms(context, send_to, content, slot, chat_id, sub_id,-1);
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
-    public static void send_sms(Context context, String send_to, String content, int slot, int sub_id, long message_id) {
+    public static void send_sms(Context context, String send_to, String content, int slot, String chat_id, int sub_id, long message_id) {
         if (PermissionChecker.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PermissionChecker.PERMISSION_GRANTED) {
             Log.d("send_sms", "No permission.");
             return;
@@ -49,7 +49,6 @@ public class sms_func {
         }
         SharedPreferences sharedPreferences = context.getSharedPreferences("data", Context.MODE_PRIVATE);
         String bot_token = sharedPreferences.getString("bot_token", "");
-        String chat_id = sharedPreferences.getString("chat_id", "");
         String request_uri = network_func.get_url(bot_token, "sendMessage");
         if (message_id != -1) {
             Log.d("send_sms", "Find the message_id and switch to edit mode.");
@@ -91,6 +90,7 @@ public class sms_func {
         BroadcastReceiver receiver = new sms_send_receiver();
         context.getApplicationContext().registerReceiver(receiver, filter);
         Intent sent_intent = new Intent("send_sms");
+        sent_intent.putExtra("chat_id", chat_id);
         sent_intent.putExtra("message_id", message_id);
         sent_intent.putExtra("message_text", send_content);
         sent_intent.putExtra("sub_id", sms_manager.getSubscriptionId());

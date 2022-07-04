@@ -82,7 +82,7 @@ public class chat_command_service extends Service {
         static final int SEND_STATUS = 3;
     }
 
-    private String chat_id;
+    private String[] chat_ids;
     private String bot_token;
     private Context context;
     private OkHttpClient okhttp_client;
@@ -111,7 +111,6 @@ public class chat_command_service extends Service {
         }
         String message_type = "";
         final request_message request_body = new request_message();
-        request_body.chat_id = chat_id;
         JsonObject message_obj = null;
 
         if (result_obj.has("message")) {
@@ -129,6 +128,7 @@ public class chat_command_service extends Service {
             callback_data = callback_query.get("data").getAsString();
         }
         if (message_type.equals("callback_query") && send_sms_next_status != SEND_SMS_STATUS.STANDBY_STATUS) {
+            String from_id = Paper.book("send_temp").read("chat_id", "");
             int slot = Paper.book("send_temp").read("slot", -1);
             long message_id = Paper.book("send_temp").read("message_id", -1L);
             String to = Paper.book("send_temp").read("to", "");
@@ -164,7 +164,7 @@ public class chat_command_service extends Service {
             } else {
                 sub_id = other_func.get_sub_id(context, slot);
             }
-            sms_func.send_sms(context, to, content, slot, sub_id, message_id);
+            sms_func.send_sms(context, to, content, slot, from_id, sub_id, message_id);
             set_sms_send_status_standby();
             return;
         }
@@ -187,10 +187,18 @@ public class chat_command_service extends Service {
 
         assert from_obj != null;
         String from_id = from_obj.get("id").getAsString();
-        if (!Objects.equals(chat_id, from_id)) {
+        int default_slot_id = -1;
+        for (int i = 0; i < chat_ids.length; i++) {
+            if (Objects.equals(chat_ids[i], from_id)) {
+                default_slot_id = i;
+                break;
+            }
+        }
+        if (default_slot_id < 0) {
             log_func.write_log(context, "Chat ID[" + from_id + "] not allow.");
             return;
         }
+        request_body.chat_id = from_id;
         String command = "";
         String command_bot_username = "";
         String request_msg = "";
@@ -203,6 +211,7 @@ public class chat_command_service extends Service {
                 String phone_number = save_item.phone;
                 int card_slot = save_item.card;
                 send_sms_next_status = SEND_SMS_STATUS.WAITING_TO_SEND_STATUS;
+                Paper.book("send_temp").write("chat_id", from_id);
                 Paper.book("send_temp").write("slot", card_slot);
                 Paper.book("send_temp").write("to", phone_number);
                 Paper.book("send_temp").write("content", request_msg);
@@ -243,7 +252,7 @@ public class chat_command_service extends Service {
             case "/commandlist":
                 String sms_command = getString(R.string.sendsms);
                 if (other_func.get_active_card(context) == 2) {
-                    sms_command = getString(R.string.sendsms_dual);
+                    sms_command += "\n" + getString(R.string.sendsms_dual);
                 }
                 sms_command += "\n" + getString(R.string.get_spam_sms);
 
@@ -252,7 +261,7 @@ public class chat_command_service extends Service {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                         ussd_command = "\n" + getString(R.string.send_ussd_command);
                         if (other_func.get_active_card(context) == 2) {
-                            ussd_command = "\n" + getString(R.string.send_ussd_dual_command);
+                            ussd_command += "\n" + getString(R.string.send_ussd_dual_command);
                         }
                     }
                 }
@@ -310,12 +319,19 @@ public class chat_command_service extends Service {
                         String[] command_list = request_msg.split(" ");
                         int sub_id = -1;
                         if (other_func.get_active_card(context) == 2) {
-                            if (command.equals("/sendussd2")) {
-                                sub_id = other_func.get_sub_id(context, 1);
+                            switch (command) {
+                                case "/sendussd1":
+                                    sub_id = other_func.get_sub_id(context, 0);
+                                    break;
+                                case "/sendussd2":
+                                    sub_id = other_func.get_sub_id(context, 1);
+                                    break;
+                                default:
+                                    sub_id = other_func.get_sub_id(context, default_slot_id);
                             }
                         }
                         if (command_list.length == 2) {
-                            ussd_func.send_ussd(context, command_list[1], sub_id);
+                            ussd_func.send_ussd(context, command_list[1], from_id, sub_id);
                             return;
                         }
                     }
@@ -333,7 +349,7 @@ public class chat_command_service extends Service {
                         OkHttpClient okhttp_client = network_func.get_okhttp_obj(sharedPreferences.getBoolean("doh_switch", true), Paper.book("system_config").read("proxy_config", new proxy()));
                         for (String item : spam_sms_list) {
                             request_message send_sms_request_body = new request_message();
-                            send_sms_request_body.chat_id = chat_id;
+                            send_sms_request_body.chat_id = from_id;
                             send_sms_request_body.text = item;
                             String request_uri = network_func.get_url(bot_token, "sendMessage");
                             String request_body_json = new Gson().toJson(send_sms_request_body);
@@ -376,19 +392,24 @@ public class chat_command_service extends Service {
                             msg_send_content.append(msg_send_list[i]);
                         }
                         if (other_func.get_active_card(context) == 1) {
-                            sms_func.send_sms(context, msg_send_to, msg_send_content.toString(), -1, -1);
+                            sms_func.send_sms(context, msg_send_to, msg_send_content.toString(),-1, from_id, -1);
                             return;
                         }
                         int send_slot = -1;
                         if (other_func.get_active_card(context) > 1) {
-                            send_slot = 0;
-                            if (command.equals("/sendsms2")) {
-                                send_slot = 1;
+                            send_slot = default_slot_id;
+                            switch (command) {
+                                case "/sendsms1":
+                                    send_slot = 0;
+                                    break;
+                                case "/sendsms2":
+                                    send_slot = 1;
+                                    break;
                             }
                         }
                         int sub_id = other_func.get_sub_id(context, send_slot);
                         if (sub_id != -1) {
-                            sms_func.send_sms(context, msg_send_to, msg_send_content.toString(), send_slot, sub_id);
+                            sms_func.send_sms(context, msg_send_to, msg_send_content.toString(), send_slot, from_id, sub_id);
                             return;
                         }
                     }
@@ -396,11 +417,17 @@ public class chat_command_service extends Service {
                     send_sms_next_status = SEND_SMS_STATUS.PHONE_INPUT_STATUS;
                     int send_slot = -1;
                     if (other_func.get_active_card(context) > 1) {
-                        send_slot = 0;
-                        if (command.equals("/sendsms2")) {
-                            send_slot = 1;
+                        send_slot = default_slot_id;
+                        switch (command) {
+                            case "/sendsms1":
+                                send_slot = 0;
+                                break;
+                            case "/sendsms2":
+                                send_slot = 1;
+                                break;
                         }
                     }
+                    Paper.book("send_temp").write("chat_id", from_id);
                     Paper.book("send_temp").write("slot", send_slot);
                 }
                 request_body.text = "[" + context.getString(R.string.send_sms_head) + "]" + "\n" + getString(R.string.failed_to_get_information);
@@ -501,7 +528,7 @@ public class chat_command_service extends Service {
         Paper.init(context);
         set_sms_send_status_standby();
         sharedPreferences = context.getSharedPreferences("data", MODE_PRIVATE);
-        chat_id = sharedPreferences.getString("chat_id", "");
+        chat_ids = other_func.get_chat_ids(sharedPreferences);
         bot_token = sharedPreferences.getString("bot_token", "");
         okhttp_client = network_func.get_okhttp_obj(sharedPreferences.getBoolean("doh_switch", true), Paper.book("system_config").read("proxy_config", new proxy()));
         privacy_mode = sharedPreferences.getBoolean("privacy_mode", false);
@@ -579,7 +606,7 @@ public class chat_command_service extends Service {
         @Override
         public void run() {
             Log.d(TAG, "run: thread main start");
-            if (other_func.parse_string_to_long(chat_id) < 0) {
+            if (chat_ids.length > 0 && other_func.parse_string_to_long(chat_ids[0]) < 0) {
                 bot_username = Paper.book().read("bot_username", null);
                 if (bot_username == null) {
                     while (!get_me()) {

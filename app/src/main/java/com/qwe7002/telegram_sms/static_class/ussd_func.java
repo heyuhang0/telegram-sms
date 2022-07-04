@@ -32,7 +32,7 @@ import okhttp3.Response;
 
 public class ussd_func {
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public static void send_ussd(Context context, String ussd_raw, int sub_id) {
+    public static void send_ussd(Context context, String ussd_raw, String chat_id, int sub_id) {
         final String TAG = "send_ussd";
         final String ussd = other_func.get_nine_key_map_convert(ussd_raw);
 
@@ -50,7 +50,6 @@ public class ussd_func {
         }
 
         String bot_token = sharedPreferences.getString("bot_token", "");
-        String chat_id = sharedPreferences.getString("chat_id", "");
         String request_uri = network_func.get_url(bot_token, "sendMessage");
         request_message request_body = new request_message();
         request_body.chat_id = chat_id;
@@ -71,7 +70,7 @@ public class ussd_func {
             }
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                 Looper.prepare();
-                final_tm.sendUssdRequest(ussd, new ussd_request_callback(context, sharedPreferences, message_id), new Handler());
+                final_tm.sendUssdRequest(ussd, new ussd_request_callback(context, sharedPreferences, chat_id, message_id), new Handler());
                 Looper.loop();
             }
         }).start();

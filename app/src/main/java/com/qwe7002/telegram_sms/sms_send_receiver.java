@@ -51,7 +51,7 @@ public class sms_send_receiver extends BroadcastReceiver {
             return;
         }
         String bot_token = sharedPreferences.getString("bot_token", "");
-        String chat_id = sharedPreferences.getString("chat_id", "");
+        String chat_id = extras.getString("chat_id");
         final request_message request_body = new request_message();
         request_body.chat_id = chat_id;
         String request_uri = network_func.get_url(bot_token, "sendMessage");

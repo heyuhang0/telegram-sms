@@ -57,7 +57,7 @@ public class battery_service extends Service {
         context = getApplicationContext();
         Paper.init(context);
         SharedPreferences sharedPreferences = context.getSharedPreferences("data", MODE_PRIVATE);
-        chat_id = sharedPreferences.getString("chat_id", "");
+        chat_id = other_func.get_chat_id(sharedPreferences, 0);
         bot_token = sharedPreferences.getString("bot_token", "");
         doh_switch = sharedPreferences.getBoolean("doh_switch", true);
         boolean charger_status = sharedPreferences.getBoolean("charger_status", false);

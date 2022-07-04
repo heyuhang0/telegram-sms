@@ -67,9 +67,6 @@ public class sms_receiver extends BroadcastReceiver {
             Log.i(TAG, "reject: android.provider.Telephony.SMS_RECEIVED.");
             return;
         }
-        String bot_token = sharedPreferences.getString("bot_token", "");
-        String chat_id = sharedPreferences.getString("chat_id", "");
-        String request_uri = network_func.get_url(bot_token, "sendMessage");
 
         int intent_slot = extras.getInt("slot", -1);
         final int sub_id = extras.getInt("subscription", -1);
@@ -81,6 +78,10 @@ public class sms_receiver extends BroadcastReceiver {
             }
         }
         final int slot = intent_slot;
+
+        String bot_token = sharedPreferences.getString("bot_token", "");
+        String request_uri = network_func.get_url(bot_token, "sendMessage");
+        String chat_id = other_func.get_chat_id(sharedPreferences, slot);
         String dual_sim = other_func.get_dual_sim_card_display(context, intent_slot, sharedPreferences.getBoolean("display_dual_sim_display_name", false));
 
         Object[] pdus = (Object[]) extras.get("pdus");
@@ -192,7 +193,7 @@ public class sms_receiver extends BroadcastReceiver {
                             }
                             final int final_send_slot = send_slot;
                             final int final_send_sub_id = other_func.get_sub_id(context, final_send_slot);
-                            new Thread(() -> sms_func.send_sms(context, msg_send_to, msg_send_content.toString(), final_send_slot, final_send_sub_id)).start();
+                            new Thread(() -> sms_func.send_sms(context, msg_send_to, msg_send_content.toString(), final_send_slot, chat_id, final_send_sub_id)).start();
                             return;
                         }
                         break;
@@ -200,7 +201,7 @@ public class sms_receiver extends BroadcastReceiver {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                             if (androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                                 if (message_list.length == 2) {
-                                    ussd_func.send_ussd(context, message_list[1], sub_id);
+                                    ussd_func.send_ussd(context, message_list[1], chat_id, sub_id);
                                     return;
                                 }
                             }

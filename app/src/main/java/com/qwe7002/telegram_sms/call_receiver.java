@@ -82,7 +82,7 @@ public class call_receiver extends BroadcastReceiver {
                     return;
                 }
                 String bot_token = sharedPreferences.getString("bot_token", "");
-                String chat_id = sharedPreferences.getString("chat_id", "");
+                String chat_id = other_func.get_chat_id(sharedPreferences, slot);
                 String request_uri = network_func.get_url(bot_token, "sendMessage");
                 final request_message request_body = new request_message();
                 request_body.chat_id = chat_id;
